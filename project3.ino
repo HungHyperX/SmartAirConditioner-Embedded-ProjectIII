@@ -12,7 +12,7 @@
 #define BUTTON_DOWN 32
 #define LED_PIN 2
 
-#define WIFI_SSID "VanThuyen"
+#define WIFI_SSID "Van Thuyen"
 #define WIFI_PASSWORD "123456789"
 #define AWS_IOT_SHADOW_TOPIC "hunghyper/sensor/data"
 
@@ -68,14 +68,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     //Serial.print((char)payload[i]);
   }
   Serial.println(message);
-
-  // // Điều khiển LED nếu nhận được tín hiệu
-  // if ((char)payload[0] == '1') {
-  //   digitalWrite(2, LOW);   // Bật LED
-  // } else {
-  //   digitalWrite(2, HIGH);  // Tắt LED
-  // }
-
   // Kiểm tra và xử lý tin nhắn từ topic
   if (String(topic) == "hunghyper/temperature/control") {
     int tempChange = message.toInt(); // Chuyển chuỗi thành số nguyên
@@ -142,6 +134,7 @@ void connectAWS() {
   // Connect to the MQTT broker on the AWS endpoint
   client.setServer(AWS_IOT_ENDPOINT, 8883);
   Serial.println("Connecting to AWS IoT");
+  client.setCallback(callback);
  
   while (!client.connect(THINGNAME)) {
     Serial.print(".");
@@ -149,13 +142,17 @@ void connectAWS() {
   }
 
   // Subscribe to a topic
-  const char* topic = "hunghyper/AC/on_off"; // Thay bằng topic bạn muốn
-  if (client.subscribe(topic)) {
+  if (client.subscribe("hunghyper/AC/on_off")) {
     Serial.print("Subscribed to topic: ");
-    Serial.println(topic);
+
   } else {
     Serial.print("Failed to subscribe to topic: ");
-    Serial.println(topic);
+   
+  }
+  if (client.subscribe("hunghyper/temperature/control")) {
+    Serial.print("Subscribed to topic: ");
+  } else {
+    Serial.print("Failed to subscribe to topic: ");
   }
 
   if (!client.connected()) {
@@ -194,12 +191,12 @@ void setup() {
   pinMode(LED_PIN, OUTPUT); // Khởi tạo chân LED
   pinMode(BUTTON_UP, INPUT_PULLUP);
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
-  Serial.begin(115200);
-  //Serial.begin(9600);
+  //Serial.begin(115200);
+  Serial.begin(9600);
   //receiver.enableIRIn();
   setup_wifi();
   //client.setServer(MQTT_SERVER, 1883);
-  client.setCallback(callback);
+  //client.setCallback(callback);
 
   client.subscribe("hunghyper/temperature/control"); // Đăng ký topic để nhận lệnh
   client.publish("hunghyper/temperature/control", "Testing from ESP32");
@@ -228,6 +225,9 @@ void loop() {
   // if (!client.connected()) {
   //   reconnect();
   // }
+  if (!client.connected()) {
+    connectAWS();
+  }
   client.loop();
 
   // Kiểm tra trạng thái các nút nhấn
